@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SIEM Log Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #210e3b; margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px 12px; border: 1px solid #ddd; }
+        th { background: #007bff; color: #fff; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .refresh-btn { margin: 20px 0; padding: 10px 20px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .refresh-btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SIEM Log Viewer</h1>
+    <button class="refresh-btn" onclick="refreshLogs()">Refresh Logs</button>
+        <table id="logs-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Protocol</th>
+                    <th>Size</th>
+                    <th>Info</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Log rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function fetchLogs() {
+            fetch('/logs')
+                .then(response => response.json())
+                .then(data => renderLogs(data));
+        }
+
+        function refreshLogs() {
+            fetch('/refresh', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logs) {
+                        renderLogs(data.logs);
+                    } else {
+                        fetchLogs();
+                    }
+                });
+        }
+
+        function renderLogs(data) {
+            const tbody = document.querySelector('#logs-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.timestamp}</td>
+                    <td>${log.src_ip}</td>
+                    <td>${log.dest_ip}</td>
+                    <td>${log.protocol}</td>
+                    <td>${log.size}</td>
+                    <td>${log.info || ''}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Initial fetch
+        fetchLogs();
+        // Optionally auto-refresh every 10 seconds
+        setInterval(fetchLogs, 10000);
+    </script>
+</body>
+</html>
