@@ -45,21 +45,28 @@ CORS(app, resources={r"/*": {"origins": trusted_origins}})
 
 
 def log_collection(src_ip, dest_ip, protocol, size, info=None):
-	"""
-	Collects a log entry from network traffic and saves it to the logs database (JSON file).
-	"""
-	log_entry = {
-		"timestamp": datetime.datetime.now().isoformat(),
-		"src_ip": src_ip,
-		"dest_ip": dest_ip,
-		"protocol": protocol,
-		"size": size,
-		"info": info
-	}
-	logs = load_logs()
-	logs.append(log_entry)
-	logs = logs[-500:]  # Keep only last 500 logs
-	save_logs(logs)
+    """
+    Collects a log entry from network traffic and saves it to the logs database (JSON file).
+    Also forwards the log to FastAPI server.
+    """
+    log_entry = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "src_ip": src_ip,
+        "dest_ip": dest_ip,
+        "protocol": protocol,
+        "size": size,
+        "info": info
+    }
+    logs = load_logs()
+    logs.append(log_entry)
+    logs = logs[-500:]  # Keep only last 500 logs
+    save_logs(logs)
+    # Forward to FastAPI server
+    try:
+        import requests
+        requests.post("http://127.0.0.1:8080/log", json=log_entry, timeout=5)
+    except Exception as e:
+        print(f"Error forwarding log to FastAPI: {e}")
 
 
 # Endpoint to receive logs
