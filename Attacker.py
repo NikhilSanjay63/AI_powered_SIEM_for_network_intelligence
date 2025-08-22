@@ -62,13 +62,6 @@ def simulate_attack(server_ip, server_port, duration=30):
         # Short pause between bursts
         time.sleep(random.uniform(0.5, 1.5))
 
-
 if __name__ == "__main__":
-    import os
-    import sys
-    # Usage: python Attacker.py <server_ip> <server_port> <duration>
-    server_ip = os.getenv("SIEM_SERVER_IP") or (sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1")
-    server_port = int(os.getenv("SIEM_SERVER_PORT") or (sys.argv[2] if len(sys.argv) > 2 else 8080))
-    duration = int(os.getenv("ATTACK_DURATION") or (sys.argv[3] if len(sys.argv) > 3 else 30))
-    print(f"[INFO] Sending attack traffic to SIEM server at {server_ip}:{server_port} for {duration} seconds.")
-    simulate_attack(server_ip, server_port, duration=duration)
+    # Simulate realistic attack traffic for 30 seconds
+    simulate_attack("127.0.0.1", 8080, duration=30)

@@ -3,348 +3,692 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIEM Log Viewer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>AI Powered SIEM Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary-color: #0a192f;
+            --secondary-color: #1e2a3a;
+            --accent-color: #64ffda;
+            --text-color: #ccd6f6;
+            --card-bg-color: #112240;
+            --danger-color: #ff6b6b;
+            --warning-color: #ffd166;
+            --success-color: #06d6a0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #1e1e2f;
-            color: #fff;
-            margin: 0;
-            padding: 0;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
-        .navbar {
-            background: #007bff;
-        }
-        .navbar-brand {
-            color: #fff;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
+
+        .sidebar {
+            background-color: var(--secondary-color);
             padding: 20px;
-            background: #2c2c3e;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+            transition: all 0.3s ease;
+            z-index: 1000;
         }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
+
+        .sidebar.collapsed {
+            width: 80px;
         }
-        .card {
-            background: #3a3a4f;
-            color: #fff;
-            border: none;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #444;
-        }
-        th {
-            background: #007bff;
-            color: #fff;
-        }
-        tr:nth-child(even) {
-            background: #3a3a4f;
-        }
-        tr:hover {
-            background: #505068;
-        }
-        .refresh-btn {
-            display: inline-block;
-            margin: 10px 0;
-            padding: 10px 20px;
-            background: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .refresh-btn:hover {
-            background: #0056b3;
-        }
-        .loading-spinner {
+
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed h2 {
             display: none;
-            margin: 20px auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #007bff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .chart-container {
-            margin-top: 40px;
-        }
-        footer {
+
+        .sidebar.collapsed .nav-link {
             text-align: center;
-            padding: 10px;
-            background: #007bff;
-            color: #fff;
-            margin-top: 20px;
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-color);
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: var(--accent-color);
+            background-color: rgba(100, 255, 218, 0.1);
+        }
+
+        .toggle-sidebar {
+            position: absolute;
+            top: 20px;
+            right: -15px;
+            background: var(--accent-color);
+            color: var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 80px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            color: var(--accent-color);
+            margin: 0;
+        }
+
+        .header .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .header .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--secondary-color);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-color: var(--accent-color);
+        }
+
+        .card-title {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px 15px;
+        }
+
+        .stat-card .fs-2 {
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .stat-card .trend {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .trend.up {
+            color: var(--danger-color);
+        }
+
+        .trend.down {
+            color: var(--success-color);
+        }
+
+        .table-dark {
+            --bs-table-bg: var(--card-bg-color);
+            --bs-table-border-color: var(--secondary-color);
+        }
+
+        .chart-container {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--secondary-color);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-title {
+            color: var(--accent-color);
+            margin: 0;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-options .btn {
+            background-color: transparent;
+            border: 1px solid var(--secondary-color);
+            color: var(--text-color);
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .filter-options .btn.active {
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            border-color: var(--accent-color);
+        }
+
+        .log-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .threat-level {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .threat-high {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: var(--danger-color);
+        }
+
+        .threat-medium {
+            background-color: rgba(255, 209, 102, 0.2);
+            color: var(--warning-color);
+        }
+
+        .threat-low {
+            background-color: rgba(6, 214, 160, 0.2);
+            color: var(--success-color);
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .search-bar {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .real-time-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 80px;
+            }
+            
+            .sidebar .nav-link span,
+            .sidebar h2 {
+                display: none;
+            }
+            
+            .sidebar .nav-link {
+                text-align: center;
+            }
+            
+            .main-content {
+                margin-left: 80px;
+            }
+            
+            .sidebar.collapsed {
+                width: 250px;
+            }
+            
+            .sidebar.collapsed .nav-link span,
+            .sidebar.collapsed h2 {
+                display: block;
+            }
+            
+            .sidebar.collapsed .nav-link {
+                text-align: left;
+            }
+            
+            .main-content.expanded {
+                margin-left: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">SIEM Dashboard</a>
-        </div>
-    </nav>
-    <div class="container">
-        <h1>SIEM Log Viewer</h1>
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <button class="refresh-btn me-2" onclick="refreshLogs()">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh Logs
-                </button>
-                <button class="refresh-btn" onclick="exportLogs()">
-                    <i class="bi bi-download"></i> Export CSV
-                </button>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar" id="toggle-sidebar">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <h2 class="mb-4">SIEM</h2>
+        <input type="text" class="search-bar" placeholder="Search...">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="#"><i class="bi bi-grid-fill me-2"></i><span>Dashboard</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"><i class="bi bi-shield-check me-2"></i><span>Alerts</span>
+                    <span class="notification-badge">5</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"><i class="bi bi-file-earmark-text me-2"></i><span>Reports</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"><i class="bi bi-activity me-2"></i><span>Threat Intelligence</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"><i class="bi bi-gear-fill me-2"></i><span>Settings</span></a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div class="header">
+            <h1><span class="real-time-indicator"></span>Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary me-2"><i class="bi bi-play-circle-fill me-2"></i>Start Scan</button>
+                <button class="btn btn-danger me-2"><i class="bi bi-slash-circle-fill me-2"></i>Block IP</button>
+                <button class="btn btn-outline-light"><i class="bi bi-download me-2"></i>Export</button>
             </div>
-            <input type="text" id="filter-input" class="form-control w-25" placeholder="Filter by IP or Protocol" oninput="filterLogs()">
         </div>
+
         <div class="row">
-            <div class="col-md-4">
-                <div class="card p-3">
-                    <h5>Total Logs</h5>
-                    <p id="total-logs">0</p>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <h5 class="card-title">Total Logs</h5>
+                    <p class="fs-2" id="total-logs">12,543</p>
+                    <div class="trend up">
+                        <i class="bi bi-arrow-up"></i> 12% from yesterday
+                    </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card p-3">
-                    <h5>Unique Protocols</h5>
-                    <p id="unique-protocols">0</p>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <h5 class="card-title">Blocked IPs</h5>
+                    <p class="fs-2" id="blocked-ips">56</p>
+                    <div class="trend down">
+                        <i class="bi bi-arrow-down"></i> 5% from last week
+                    </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card p-3">
-                    <h5>Last Updated</h5>
-                    <p id="last-updated">N/A</p>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <h5 class="card-title">Active Threats</h5>
+                    <p class="fs-2" id="active-threats">12</p>
+                    <div class="trend up">
+                        <i class="bi bi-arrow-up"></i> 3 new today
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <h5 class="card-title">Incidents</h5>
+                    <p class="fs-2" id="incidents">7</p>
+                    <div class="trend">
+                        <i class="bi bi-dash"></i> No change
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="row chart-container">
+
+        <div class="row mt-4">
             <div class="col-md-6">
-                <h5 class="text-center">Traffic by Protocol</h5>
-                <canvas id="traffic-chart"></canvas>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Protocol Distribution</h3>
+                        <div class="filter-options">
+                            <button class="btn active">Day</button>
+                            <button class="btn">Week</button>
+                            <button class="btn">Month</button>
+                        </div>
+                    </div>
+                    <canvas id="protocol-chart"></canvas>
+                </div>
             </div>
             <div class="col-md-6">
-                <h5 class="text-center">Log Volume Over Time</h5>
-                <canvas id="volume-chart"></canvas>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Log Trend</h3>
+                        <div class="filter-options">
+                            <button class="btn active">Day</button>
+                            <button class="btn">Week</button>
+                            <button class="btn">Month</button>
+                        </div>
+                    </div>
+                    <canvas id="log-trend-chart"></canvas>
+                </div>
             </div>
         </div>
-        <div class="row chart-container">
+
+        <div class="row mt-4">
             <div class="col-md-12">
-                <h5 class="text-center">Protocol Distribution</h5>
-                <canvas id="protocol-doughnut"></canvas>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Threat Map</h3>
+                        <div class="filter-options">
+                            <button class="btn active">Live</button>
+                            <button class="btn">24h</button>
+                        </div>
+                    </div>
+                    <div id="threat-map" style="height: 200px; background-color: #0c2039; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <p class="text-muted">Interactive threat visualization would appear here</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <button class="refresh-btn" onclick="refreshLogs()">Refresh Logs</button>
-        <div class="loading-spinner" id="loading-spinner"></div>
-        <table id="logs-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Source IP</th>
-                    <th>Destination IP</th>
-                    <th>Protocol</th>
-                    <th>Size</th>
-                    <th>Info</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Log rows will be inserted here -->
-            </tbody>
-        </table>
-        <div class="chart-container">
-            <h2 class="text-center">Traffic Statistics</h2>
-            <canvas id="traffic-chart"></canvas>
+
+        <div class="chart-container mt-4">
+            <div class="chart-header">
+                <h3 class="chart-title">Recent Security Events</h3>
+                <div class="filter-options">
+                    <button class="btn active">All</button>
+                    <button class="btn">High</button>
+                    <button class="btn">Medium</button>
+                    <button class="btn">Low</button>
+                </div>
+            </div>
+            <div class="log-table-container">
+                <table class="table table-dark table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Source IP</th>
+                            <th>Destination IP</th>
+                            <th>Protocol</th>
+                            <th>Threat Level</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body">
+                        <!-- Log data will be injected here by backend fetch -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <footer>
-        <p>SIEM Dashboard © 2023</p>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.js"></script>
+
     <script>
-        let trafficChartInstance, volumeChartInstance, protocolDoughnutInstance;
-        let logsData = [];
-
-        async function fetchLogs() {
-            const spinner = document.getElementById('loading-spinner');
-            spinner.style.display = 'block';
-            try {
-                const response = await fetch('/refresh', { method: 'POST' });
-                if (!response.ok) throw new Error('Failed to fetch logs');
-                const data = await response.json();
-                renderLogs(data.logs);
-                updateStatistics(data.logs);
-                logsData = data.logs;
-                renderTrafficChart(getProtocolStats(logsData));
-                renderVolumeChart(logsData);
-                renderProtocolDoughnut(logsData);
-            } catch (error) {
-                console.error('Error fetching logs:', error);
-                const errorNotification = document.createElement('div');
-                errorNotification.textContent = 'Failed to fetch logs. Please try again later.';
-                errorNotification.style.color = 'red';
-                errorNotification.style.textAlign = 'center';
-                document.body.prepend(errorNotification);
-                setTimeout(() => errorNotification.remove(), 5000);
-            } finally {
-                spinner.style.display = 'none';
+        // Toggle sidebar functionality
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+        
+        toggleSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            
+            // Change icon based on state
+            const icon = toggleSidebarBtn.querySelector('i');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('bi-chevron-left');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-left');
             }
-        }
-
-        function refreshLogs() {
-            fetchLogs();
-        }
-
-        function renderLogs(data) {
-            const tbody = document.querySelector('#logs-table tbody');
-            tbody.innerHTML = '';
-            data.forEach(log => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${log.timestamp}</td>
-                    <td>${log.src_ip}</td>
-                    <td>${log.dest_ip}</td>
-                    <td>${log.protocol}</td>
-                    <td>${log.size}</td>
-                    <td>${log.info || ''}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function updateStatistics(data) {
-            document.getElementById('total-logs').textContent = data.length;
-            const protocols = new Set(data.map(log => log.protocol));
-            document.getElementById('unique-protocols').textContent = protocols.size;
-            const lastUpdated = data.length > 0 ? data[data.length - 1].timestamp : 'N/A';
-            document.getElementById('last-updated').textContent = lastUpdated;
-        }
-
-        function filterLogs() {
-            const filter = document.getElementById('filter-input').value.toLowerCase();
-            const filtered = logsData.filter(log =>
-                log.src_ip.toLowerCase().includes(filter) ||
-                log.dest_ip.toLowerCase().includes(filter) ||
-                log.protocol.toLowerCase().includes(filter)
-            );
-            renderLogs(filtered);
-        }
-
-        function exportLogs() {
-            const csv = logsData.map(log =>
-                [log.timestamp, log.src_ip, log.dest_ip, log.protocol, log.size, log.info || ''].join(',')
-            ).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'logs.csv';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function renderTrafficChart(data) {
-            const ctx = document.getElementById('traffic-chart').getContext('2d');
-            const chartData = data && Object.keys(data).length > 0 ? data : { NoData: 1 };
-
-            if (trafficChartInstance) {
-                trafficChartInstance.destroy();
-            }
-
-            trafficChartInstance = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(chartData),
-                    datasets: [{
-                        data: Object.values(chartData),
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                    },
-                }
-            });
-        }
-
-        function renderVolumeChart(data) {
-            const ctx = document.getElementById('volume-chart').getContext('2d');
-            if (volumeChartInstance) volumeChartInstance.destroy();
-            const timestamps = data.map(log => log.timestamp);
-            const sizes = data.map(log => log.size);
-            volumeChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: timestamps,
-                    datasets: [{
-                        label: 'Log Size',
-                        data: sizes,
-                        backgroundColor: '#36A2EB'
-                    }]
-                },
-                options: { responsive: true }
-            });
-        }
-
-        function renderProtocolDoughnut(data) {
-            const ctx = document.getElementById('protocol-doughnut').getContext('2d');
-            if (protocolDoughnutInstance) protocolDoughnutInstance.destroy();
-            const protocolCounts = {};
-            data.forEach(log => {
-                protocolCounts[log.protocol] = (protocolCounts[log.protocol] || 0) + 1;
-            });
-            protocolDoughnutInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(protocolCounts),
-                    datasets: [{
-                        data: Object.values(protocolCounts),
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
-                    }]
-                },
-                options: { responsive: true }
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchLogs();
-            // Example chart data
-            renderTrafficChart({ TCP: 60, UDP: 30, ICMP: 10 });
-            renderVolumeChart([]);
-            renderProtocolDoughnut([]);
         });
 
-        setInterval(fetchLogs, 10000);
 
-        function getProtocolStats(data) {
-            const stats = {};
-            data.forEach(log => {
-                stats[log.protocol] = (stats[log.protocol] || 0) + 1;
-            });
-            return stats;
+        // Function to determine threat level class
+        function getThreatClass(level) {
+            switch(level) {
+                case 'High': return 'threat-high';
+                case 'Medium': return 'threat-medium';
+                case 'Low': return 'threat-low';
+                default: return '';
+            }
         }
+
+        // Fetch logs from backend and populate table
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/logs');
+                const logs = await response.json();
+                const logTableBody = document.getElementById('log-table-body');
+                logTableBody.innerHTML = '';
+                // Show only the latest 15 logs
+                logs.slice(-15).reverse().forEach(log => {
+                    // Determine threat level (example: classify by info or protocol)
+                    let threat = 'Low';
+                    if (log.info && log.info.toLowerCase().includes('attack')) threat = 'High';
+                    else if (log.info && log.info.toLowerCase().includes('anomaly')) threat = 'Medium';
+                    const threatClass = getThreatClass(threat);
+                    const row = `<tr>
+                        <td>${log.timestamp || ''}</td>
+                        <td>${log.src_ip || ''}</td>
+                        <td>${log.dest_ip || ''}</td>
+                        <td>${log.protocol || ''}</td>
+                        <td><span class="threat-level ${threatClass}">${threat}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-light action-btn">Details</button>
+                            <button class="btn btn-sm btn-outline-danger action-btn">Block</button>
+                        </td>
+                    </tr>`;
+                    logTableBody.innerHTML += row;
+                });
+                // Update stats
+                document.getElementById('total-logs').textContent = logs.length.toLocaleString();
+            } catch (err) {
+                console.error('Error fetching logs:', err);
+            }
+        }
+
+        // Initial fetch
+        fetchLogs();
+        // Refresh logs every 5 seconds
+        setInterval(fetchLogs, 5000);
+
+        // Protocol Distribution Chart
+        const protocolCtx = document.getElementById('protocol-chart').getContext('2d');
+        new Chart(protocolCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'DNS'],
+                datasets: [{
+                    data: [35, 20, 10, 15, 12, 8],
+                    backgroundColor: [
+                        '#64ffda', 
+                        '#ff6384', 
+                        '#36a2eb', 
+                        '#ff9f40', 
+                        '#9966ff', 
+                        '#ffcd56'
+                    ],
+                    borderColor: 'var(--card-bg-color)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: 'var(--text-color)',
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Log Trend Chart
+        const logTrendCtx = document.getElementById('log-trend-chart').getContext('2d');
+        new Chart(logTrendCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'Normal',
+                    data: [80, 110, 105, 130, 140, 120],
+                    borderColor: '#06d6a0',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(6, 214, 160, 0.1)'
+                }, {
+                    label: 'Threats',
+                    data: [5, 8, 12, 15, 10, 7],
+                    borderColor: '#ff6b6b',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: 'var(--text-color)'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: 'var(--text-color)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: 'var(--text-color)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+
+        // Simulate real-time updates
+        setInterval(() => {
+            // Randomly update stats to simulate real-time data
+            const totalLogs = document.getElementById('total-logs');
+            const currentLogs = parseInt(totalLogs.textContent.replace(/,/g, ''));
+            totalLogs.textContent = (currentLogs + Math.floor(Math.random() * 10)).toLocaleString();
+            
+            // Add a new log entry occasionally
+            if (Math.random() > 0.7) {
+                const threats = ['High', 'Medium', 'Low'];
+                const protocols = ['TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'DNS'];
+                const newLog = {
+                    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                    src_ip: `192.168.1.${Math.floor(Math.random() * 50)}`,
+                    dest_ip: `10.0.0.${Math.floor(Math.random() * 5)}`,
+                    protocol: protocols[Math.floor(Math.random() * protocols.length)],
+                    threat: threats[Math.floor(Math.random() * threats.length)]
+                };
+                
+                const threatClass = getThreatClass(newLog.threat);
+                const row = `<tr>
+                    <td>${newLog.timestamp}</td>
+                    <td>${newLog.src_ip}</td>
+                    <td>${newLog.dest_ip}</td>
+                    <td>${newLog.protocol}</td>
+                    <td><span class="threat-level ${threatClass}">${newLog.threat}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-light action-btn">Details</button>
+                        <button class="btn btn-sm btn-outline-danger action-btn">Block</button>
+                    </td>
+                </tr>`;
+                
+                // Add new row at the beginning of the table
+                logTableBody.innerHTML = row + logTableBody.innerHTML;
+                
+                // If table has more than 15 rows, remove the last one
+                if (logTableBody.children.length > 15) {
+                    logTableBody.removeChild(logTableBody.lastChild);
+                }
+            }
+        }, 3000);
     </script>
 </body>
-</html>
+</html>**

@@ -65,13 +65,10 @@ def log_collection(src_ip, dest_ip, protocol, size, info=None):
     logs.append(log_entry)
     logs = logs[-500:]  # Keep only last 500 logs
     save_logs(logs)
-    # Forward to FastAPI server (remote address configurable)
+    # Forward to FastAPI server
     try:
         import requests
-        fastapi_host = os.getenv("FASTAPI_SERVER_IP", "127.0.0.1")
-        fastapi_port = os.getenv("FASTAPI_SERVER_PORT", "8080")
-        fastapi_url = f"http://{fastapi_host}:{fastapi_port}/log"
-        requests.post(fastapi_url, json=log_entry, timeout=5)
+        requests.post("http://127.0.0.1:8080/log", json=log_entry, timeout=5)
     except Exception as e:
         print(f"Error forwarding log to FastAPI: {e}")
 
@@ -129,14 +126,14 @@ def page_not_found(e):
 
 
 if __name__ == "__main__":
-
-    # Usage for hackathon:
-    # Set FASTAPI_SERVER_IP and FASTAPI_SERVER_PORT to point to the remote FastAPI server
-    # Example:
-    #   set FASTAPI_SERVER_IP=192.168.1.100
-    #   set FASTAPI_SERVER_PORT=8080
-    #   python Server.py
+    # Use debug=True only in development, and ensure the port is configurable
+    import os
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    port = int(os.getenv("PORT", 8080))  # Allow overriding the port via an environment variable
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
+
     port = int(os.getenv("PORT", 8080))  # Allow overriding the port via an environment variable
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
 
