@@ -56,13 +56,19 @@ class AIBrainSIEM:
     def monitor(self):
         print("Monitoring phase started...")
         while True:
-            current_count = self.query_event_count(seconds=1)
-            z_score = (current_count - self.mean) / self.std if self.std > 0 else 0
-            print(f"Current event count: {current_count}, Z-score: {z_score:.2f}")
-            if z_score > 3.5:
-                print("Attack detected! Pinpointing malicious IPs...")
-                self.detect_and_block()
-            time.sleep(1)
+            try:
+                current_count = self.query_event_count(seconds=1)
+                # Ensure std is never zero
+                std = self.std if self.std > 0 else 1
+                z_score = (current_count - self.mean) / std
+                print(f"Current event count: {current_count}, Z-score: {z_score:.2f}")
+                if z_score > 3.5:
+                    print("Attack detected! Pinpointing malicious IPs...")
+                    self.detect_and_block()
+                time.sleep(1)
+            except Exception as e:
+                print(f"Monitoring error: {e}")
+                time.sleep(1)
 
     def detect_and_block(self):
         recent_events = self.query_events(seconds=10)

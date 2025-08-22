@@ -38,9 +38,18 @@ def send_packet(server_ip, server_port, src_ip, packet_type="normal"):
 
 
 def simulate_attack(server_ip, server_port, duration=30):
+    # Generate a new pool of attack IPs each run to ensure new IPs are blocked
     attack_ips = [
-        "192.168.1.100", "10.0.0.5", "172.16.0.9", "203.0.113.77", "198.51.100.23",
-        "8.8.8.8", "185.199.108.153", "45.33.32.156", "123.45.67.89", "156.154.70.1"
+        f"192.168.1.{random.randint(1,254)}",
+        f"10.0.0.{random.randint(1,254)}",
+        f"172.16.0.{random.randint(1,254)}",
+        f"203.0.113.{random.randint(1,254)}",
+        f"198.51.100.{random.randint(1,254)}",
+        f"8.8.8.{random.randint(1,254)}",
+        f"185.199.108.{random.randint(1,254)}",
+        f"45.33.32.{random.randint(1,254)}",
+        f"123.45.67.{random.randint(1,254)}",
+        f"156.154.70.{random.randint(1,254)}"
     ]
     start_time = time.time()
     while time.time() - start_time < duration:
