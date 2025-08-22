@@ -2,23 +2,159 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIEM Log Viewer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #210e3b; margin: 0; padding: 0; }
-        .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h1 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 8px 12px; border: 1px solid #ddd; }
-        th { background: #007bff; color: #fff; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        .refresh-btn { margin: 20px 0; padding: 10px 20px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-        .refresh-btn:hover { background: #0056b3; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e2f;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background: #007bff;
+        }
+        .navbar-brand {
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #2c2c3e;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #3a3a4f;
+            color: #fff;
+            border: none;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #444;
+        }
+        th {
+            background: #007bff;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background: #3a3a4f;
+        }
+        tr:hover {
+            background: #505068;
+        }
+        .refresh-btn {
+            display: inline-block;
+            margin: 10px 0;
+            padding: 10px 20px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+        .loading-spinner {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            margin-top: 40px;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background: #007bff;
+            color: #fff;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">SIEM Dashboard</a>
+        </div>
+    </nav>
     <div class="container">
         <h1>SIEM Log Viewer</h1>
-    <button class="refresh-btn" onclick="refreshLogs()">Refresh Logs</button>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <button class="refresh-btn me-2" onclick="refreshLogs()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Logs
+                </button>
+                <button class="refresh-btn" onclick="exportLogs()">
+                    <i class="bi bi-download"></i> Export CSV
+                </button>
+            </div>
+            <input type="text" id="filter-input" class="form-control w-25" placeholder="Filter by IP or Protocol" oninput="filterLogs()">
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Total Logs</h5>
+                    <p id="total-logs">0</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Unique Protocols</h5>
+                    <p id="unique-protocols">0</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Last Updated</h5>
+                    <p id="last-updated">N/A</p>
+                </div>
+            </div>
+        </div>
+        <div class="row chart-container">
+            <div class="col-md-6">
+                <h5 class="text-center">Traffic by Protocol</h5>
+                <canvas id="traffic-chart"></canvas>
+            </div>
+            <div class="col-md-6">
+                <h5 class="text-center">Log Volume Over Time</h5>
+                <canvas id="volume-chart"></canvas>
+            </div>
+        </div>
+        <div class="row chart-container">
+            <div class="col-md-12">
+                <h5 class="text-center">Protocol Distribution</h5>
+                <canvas id="protocol-doughnut"></canvas>
+            </div>
+        </div>
+        <button class="refresh-btn" onclick="refreshLogs()">Refresh Logs</button>
+        <div class="loading-spinner" id="loading-spinner"></div>
         <table id="logs-table">
             <thead>
                 <tr>
@@ -34,24 +170,47 @@
                 <!-- Log rows will be inserted here -->
             </tbody>
         </table>
+        <div class="chart-container">
+            <h2 class="text-center">Traffic Statistics</h2>
+            <canvas id="traffic-chart"></canvas>
+        </div>
     </div>
+    <footer>
+        <p>SIEM Dashboard © 2023</p>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.js"></script>
     <script>
-        function fetchLogs() {
-            fetch('/logs')
-                .then(response => response.json())
-                .then(data => renderLogs(data));
+        let trafficChartInstance, volumeChartInstance, protocolDoughnutInstance;
+        let logsData = [];
+
+        async function fetchLogs() {
+            const spinner = document.getElementById('loading-spinner');
+            spinner.style.display = 'block';
+            try {
+                const response = await fetch('/refresh', { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to fetch logs');
+                const data = await response.json();
+                renderLogs(data.logs);
+                updateStatistics(data.logs);
+                logsData = data.logs;
+                renderTrafficChart(getProtocolStats(logsData));
+                renderVolumeChart(logsData);
+                renderProtocolDoughnut(logsData);
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+                const errorNotification = document.createElement('div');
+                errorNotification.textContent = 'Failed to fetch logs. Please try again later.';
+                errorNotification.style.color = 'red';
+                errorNotification.style.textAlign = 'center';
+                document.body.prepend(errorNotification);
+                setTimeout(() => errorNotification.remove(), 5000);
+            } finally {
+                spinner.style.display = 'none';
+            }
         }
 
         function refreshLogs() {
-            fetch('/refresh', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.logs) {
-                        renderLogs(data.logs);
-                    } else {
-                        fetchLogs();
-                    }
-                });
+            fetchLogs();
         }
 
         function renderLogs(data) {
@@ -71,10 +230,121 @@
             });
         }
 
-        // Initial fetch
-        fetchLogs();
-        // Optionally auto-refresh every 10 seconds
+        function updateStatistics(data) {
+            document.getElementById('total-logs').textContent = data.length;
+            const protocols = new Set(data.map(log => log.protocol));
+            document.getElementById('unique-protocols').textContent = protocols.size;
+            const lastUpdated = data.length > 0 ? data[data.length - 1].timestamp : 'N/A';
+            document.getElementById('last-updated').textContent = lastUpdated;
+        }
+
+        function filterLogs() {
+            const filter = document.getElementById('filter-input').value.toLowerCase();
+            const filtered = logsData.filter(log =>
+                log.src_ip.toLowerCase().includes(filter) ||
+                log.dest_ip.toLowerCase().includes(filter) ||
+                log.protocol.toLowerCase().includes(filter)
+            );
+            renderLogs(filtered);
+        }
+
+        function exportLogs() {
+            const csv = logsData.map(log =>
+                [log.timestamp, log.src_ip, log.dest_ip, log.protocol, log.size, log.info || ''].join(',')
+            ).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'logs.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function renderTrafficChart(data) {
+            const ctx = document.getElementById('traffic-chart').getContext('2d');
+            const chartData = data && Object.keys(data).length > 0 ? data : { NoData: 1 };
+
+            if (trafficChartInstance) {
+                trafficChartInstance.destroy();
+            }
+
+            trafficChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(chartData),
+                    datasets: [{
+                        data: Object.values(chartData),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
+                }
+            });
+        }
+
+        function renderVolumeChart(data) {
+            const ctx = document.getElementById('volume-chart').getContext('2d');
+            if (volumeChartInstance) volumeChartInstance.destroy();
+            const timestamps = data.map(log => log.timestamp);
+            const sizes = data.map(log => log.size);
+            volumeChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: timestamps,
+                    datasets: [{
+                        label: 'Log Size',
+                        data: sizes,
+                        backgroundColor: '#36A2EB'
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        function renderProtocolDoughnut(data) {
+            const ctx = document.getElementById('protocol-doughnut').getContext('2d');
+            if (protocolDoughnutInstance) protocolDoughnutInstance.destroy();
+            const protocolCounts = {};
+            data.forEach(log => {
+                protocolCounts[log.protocol] = (protocolCounts[log.protocol] || 0) + 1;
+            });
+            protocolDoughnutInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(protocolCounts),
+                    datasets: [{
+                        data: Object.values(protocolCounts),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLogs();
+            // Example chart data
+            renderTrafficChart({ TCP: 60, UDP: 30, ICMP: 10 });
+            renderVolumeChart([]);
+            renderProtocolDoughnut([]);
+        });
+
         setInterval(fetchLogs, 10000);
+
+        function getProtocolStats(data) {
+            const stats = {};
+            data.forEach(log => {
+                stats[log.protocol] = (stats[log.protocol] || 0) + 1;
+            });
+            return stats;
+        }
     </script>
 </body>
 </html>
