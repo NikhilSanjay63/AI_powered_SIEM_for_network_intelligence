@@ -1,3 +1,4 @@
+from blocked_ips import is_ip_blocked
 #libraries for the SIEM 
 from collections import deque
 import logging
@@ -49,6 +50,9 @@ def log_collection(src_ip, dest_ip, protocol, size, info=None):
     Collects a log entry from network traffic and saves it to the logs database (JSON file).
     Also forwards the log to FastAPI server.
     """
+    if is_ip_blocked(src_ip):
+        print(f"Blocked IP {src_ip} attempted to send a packet. Ignored.")
+        return
     log_entry = {
         "timestamp": datetime.datetime.now().isoformat(),
         "src_ip": src_ip,
