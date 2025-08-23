@@ -31,4 +31,4 @@ def send_blocked_ip_request(server_ip, server_port):
             print(f"Error sending request from blocked IP {ip}: {e}")
 
 if __name__ == "__main__":
-    send_blocked_ip_request("127.0.0.1", 8080)
+    send_blocked_ip_request("127.0.0.1", 8000)

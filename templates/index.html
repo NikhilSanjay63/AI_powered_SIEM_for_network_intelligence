@@ -143,6 +143,7 @@
         .stat-card .fs-2 {
             font-weight: 700;
             margin: 10px 0;
+            color: var(--text-color);
         }
 
         .stat-card .trend {
@@ -446,18 +447,7 @@
 
         <div class="row mt-4">
             <div class="col-md-12">
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Threat Map</h3>
-                        <div class="filter-options">
-                            <button class="btn active">Live</button>
-                            <button class="btn">24h</button>
-                        </div>
-                    </div>
-                    <div id="threat-map" style="height: 200px; background-color: #0c2039; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                        <p class="text-muted">Interactive threat visualization would appear here</p>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -513,63 +503,62 @@
         });
 
 
-        // Function to determine threat level class
-        function getThreatClass(level) {
-            switch(level) {
-                case 'High': return 'threat-high';
-                case 'Medium': return 'threat-medium';
-                case 'Low': return 'threat-low';
-                default: return '';
-            }
-        }
-
-        // Fetch logs from backend and populate table
-        async function fetchLogs() {
+        // Fetch data from backend and update dashboard
+        async function fetchData() {
             try {
-                const response = await fetch('/logs');
-                const logs = await response.json();
+                const [logsResponse, protocolResponse] = await Promise.all([
+                    fetch('/logs'),
+                    fetch('/protocol_distribution')
+                ]);
+
+                const logsData = await logsResponse.json();
+                const protocolData = await protocolResponse.json();
+
+                // Update log table
                 const logTableBody = document.getElementById('log-table-body');
                 logTableBody.innerHTML = '';
-                // Show only the latest 15 logs
-                logs.slice(-15).reverse().forEach(log => {
-                    // Determine threat level (example: classify by info or protocol)
-                    let threat = 'Low';
-                    if (log.info && log.info.toLowerCase().includes('attack')) threat = 'High';
-                    else if (log.info && log.info.toLowerCase().includes('anomaly')) threat = 'Medium';
-                    const threatClass = getThreatClass(threat);
-                    const row = `<tr>
-                        <td>${log.timestamp || ''}</td>
-                        <td>${log.src_ip || ''}</td>
-                        <td>${log.dest_ip || ''}</td>
-                        <td>${log.protocol || ''}</td>
-                        <td><span class="threat-level ${threatClass}">${threat}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-light action-btn">Details</button>
-                            <button class="btn btn-sm btn-outline-danger action-btn">Block</button>
-                        </td>
-                    </tr>`;
+                logsData.slice(-10).forEach(log => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(log.timestamp).toLocaleString()}</td>
+                            <td>${log.src_ip}</td>
+                            <td>${log.dest_ip}</td>
+                            <td>${log.protocol}</td>
+                            <td><span class="threat-level threat-medium">Medium</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-danger action-btn">Block</button>
+                                <button class="btn btn-sm btn-secondary action-btn">Details</button>
+                            </td>
+                        </tr>
+                    `;
                     logTableBody.innerHTML += row;
                 });
-                // Update stats
-                document.getElementById('total-logs').textContent = logs.length.toLocaleString();
+
+                // Update protocol chart
+                const protocolLabels = Object.keys(protocolData);
+                const protocolValues = Object.values(protocolData);
+                protocolChart.data.labels = protocolLabels;
+                protocolChart.data.datasets[0].data = protocolValues;
+                protocolChart.update();
+
             } catch (err) {
-                console.error('Error fetching logs:', err);
+                console.error('Error fetching data:', err);
             }
         }
 
         // Initial fetch
-        fetchLogs();
-        // Refresh logs every 5 seconds
-        setInterval(fetchLogs, 5000);
+        fetchData();
+        // Refresh data every 5 seconds
+        setInterval(fetchData, 5000);
 
         // Protocol Distribution Chart
         const protocolCtx = document.getElementById('protocol-chart').getContext('2d');
-        new Chart(protocolCtx, {
+        const protocolChart = new Chart(protocolCtx, {
             type: 'doughnut',
             data: {
-                labels: ['TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'DNS'],
+                labels: [],
                 datasets: [{
-                    data: [35, 20, 10, 15, 12, 8],
+                    data: [],
                     backgroundColor: [
                         '#64ffda', 
                         '#ff6384', 
@@ -648,47 +637,7 @@
             }
         });
 
-        // Simulate real-time updates
-        setInterval(() => {
-            // Randomly update stats to simulate real-time data
-            const totalLogs = document.getElementById('total-logs');
-            const currentLogs = parseInt(totalLogs.textContent.replace(/,/g, ''));
-            totalLogs.textContent = (currentLogs + Math.floor(Math.random() * 10)).toLocaleString();
-            
-            // Add a new log entry occasionally
-            if (Math.random() > 0.7) {
-                const threats = ['High', 'Medium', 'Low'];
-                const protocols = ['TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'DNS'];
-                const newLog = {
-                    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                    src_ip: `192.168.1.${Math.floor(Math.random() * 50)}`,
-                    dest_ip: `10.0.0.${Math.floor(Math.random() * 5)}`,
-                    protocol: protocols[Math.floor(Math.random() * protocols.length)],
-                    threat: threats[Math.floor(Math.random() * threats.length)]
-                };
-                
-                const threatClass = getThreatClass(newLog.threat);
-                const row = `<tr>
-                    <td>${newLog.timestamp}</td>
-                    <td>${newLog.src_ip}</td>
-                    <td>${newLog.dest_ip}</td>
-                    <td>${newLog.protocol}</td>
-                    <td><span class="threat-level ${threatClass}">${newLog.threat}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-light action-btn">Details</button>
-                        <button class="btn btn-sm btn-outline-danger action-btn">Block</button>
-                    </td>
-                </tr>`;
-                
-                // Add new row at the beginning of the table
-                logTableBody.innerHTML = row + logTableBody.innerHTML;
-                
-                // If table has more than 15 rows, remove the last one
-                if (logTableBody.children.length > 15) {
-                    logTableBody.removeChild(logTableBody.lastChild);
-                }
-            }
-        }, 3000);
+         
     </script>
 </body>
 </html>**

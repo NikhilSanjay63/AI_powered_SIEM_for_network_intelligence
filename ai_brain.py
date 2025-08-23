@@ -75,7 +75,14 @@ class AIBrainSIEM:
         ip_counts = Counter(log["src_ip"] for log in recent_events)
         for ip, count in ip_counts.items():
             if count > 5:
-                self.blocked_ips.add(ip)
+                protocols = [log["protocol"] for log in recent_events if log["src_ip"] == ip]
+                protocol_counts = Counter(protocols)
+                total_protocols = len(protocols)
+                icmp_percentage = (protocol_counts.get("ICMP", 0) / total_protocols) * 100
+                udp_percentage = (protocol_counts.get("UDP", 0) / total_protocols) * 100
+
+                if icmp_percentage > 50 or udp_percentage > 50:
+                    self.blocked_ips.add(ip)
         self.save_blocked_ips()
         print(f"Blocked IPs: {list(self.blocked_ips)}")
 

@@ -64,4 +64,4 @@ def simulate_attack(server_ip, server_port, duration=30):
 
 if __name__ == "__main__":
     # Simulate realistic attack traffic for 30 seconds
-    simulate_attack("127.0.0.1", 8080, duration=30)
+    simulate_attack("127.0.0.1", 8000, duration=30)
